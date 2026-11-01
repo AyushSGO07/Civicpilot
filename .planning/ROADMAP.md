@@ -12,10 +12,10 @@ CivicPilot transforms public service bureaucracy into a guided, autonomous consu
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Project Foundation & MakeMyTrip Design System** - Next.js 15, FastAPI, Supabase setup, and MakeMyTrip visual identity
-- [ ] **Phase 2: Authentication & Citizen Profile Management** - Supabase Auth, persistent sessions, and comprehensive citizen profile schema
-- [ ] **Phase 3: Secure Document Vault & Multimodal OCR Extraction** - Private document storage, preview, and Gemini multimodal OCR parsing
-- [ ] **Phase 4: Live Government Scheme Discovery & Search** - Ingesting verified official schemes with natural language search & filtering
-- [ ] **Phase 5: AI Eligibility Assessment Engine** - Gemini-powered profile evaluation against official criteria with citations
+- [x] **Phase 2: Authentication & Citizen Profile Management** - Supabase Auth, persistent sessions, and comprehensive citizen profile schema
+- [x] **Phase 3: Secure Document Vault & Multimodal OCR Extraction** - Private document storage, preview, and Gemini multimodal OCR parsing
+- [x] **Phase 4: Live Government Scheme Discovery & Search** - Ingesting verified official schemes with natural language search & filtering
+- [x] **Phase 5: AI Eligibility Assessment Engine** - Gemini-powered profile evaluation against official criteria with citations
 - [ ] **Phase 6: Playwright Browser Automation Core & DOM Inspection** - Headless Chromium engine and accessible semantic DOM tree extraction
 - [ ] **Phase 7: Dynamic Field Mapping & Form Filling Engine** - Dynamic Gemini field mapping and automated multi-step form population
 - [ ] **Phase 8: LangGraph Workflow Orchestration & Bounded Recovery** - Stateful workflow state machine with checkpointing and bounded retries
@@ -130,8 +130,8 @@ Plans:
 
 Plans:
 
-- [ ] 05-01: Implement backend Gemini eligibility reasoning service with structured JSON output and source citation logic
-- [ ] 05-02: Build AI Eligibility Assistant modal/drawer in frontend showing comparison breakdown and missing field alerts
+- [x] 05-01: Implement backend Gemini eligibility reasoning service with structured JSON output and source citation logic
+- [x] 05-02: Build AI Eligibility Assistant modal/drawer in frontend showing comparison breakdown and missing field alerts
 
 ### Phase 6: Playwright Browser Automation Core & DOM Inspection
 
@@ -278,11 +278,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Foundation & MakeMyTrip Design System | 0/3 | Not started | - |
-| 2. Authentication & Citizen Profile Management | 0/3 | Not started | - |
-| 3. Secure Document Vault & Multimodal OCR Extraction | 0/3 | Not started | - |
-| 4. Live Government Scheme Discovery & Search | 0/2 | Not started | - |
-| 5. AI Eligibility Assessment Engine | 0/2 | Not started | - |
+| 1. Project Foundation & MakeMyTrip Design System | 3/3 | Completed | 2026-11-01 |
+| 2. Authentication & Citizen Profile Management | 3/3 | Completed | 2026-11-01 |
+| 3. Secure Document Vault & Multimodal OCR Extraction | 3/3 | Completed | 2026-11-01 |
+| 4. Live Government Scheme Discovery & Search | 2/2 | Completed | 2026-11-01 |
+| 5. AI Eligibility Assessment Engine | 2/2 | Completed | 2026-11-01 |
 | 6. Playwright Browser Automation Core & DOM Inspection | 0/2 | Not started | - |
 | 7. Dynamic Field Mapping & Form Filling Engine | 0/2 | Not started | - |
 | 8. LangGraph Workflow Orchestration & Bounded Recovery | 0/2 | Not started | - |
