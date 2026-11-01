@@ -11,7 +11,7 @@ CivicPilot transforms public service bureaucracy into a guided, autonomous consu
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Project Foundation & MakeMyTrip Design System** - Next.js 15, FastAPI, Supabase setup, and MakeMyTrip visual identity
+- [x] **Phase 1: Project Foundation & MakeMyTrip Design System** - Next.js 15, FastAPI, Supabase setup, and MakeMyTrip visual identity
 - [ ] **Phase 2: Authentication & Citizen Profile Management** - Supabase Auth, persistent sessions, and comprehensive citizen profile schema
 - [ ] **Phase 3: Secure Document Vault & Multimodal OCR Extraction** - Private document storage, preview, and Gemini multimodal OCR parsing
 - [ ] **Phase 4: Live Government Scheme Discovery & Search** - Ingesting verified official schemes with natural language search & filtering
@@ -44,12 +44,12 @@ CivicPilot transforms public service bureaucracy into a guided, autonomous consu
 Plans:
 **Wave 1**
 
-- [ ] 01-01: Initialize Next.js 15 project with Tailwind CSS, shadcn/ui, Lucide icons, and MakeMyTrip theme palette
-- [ ] 01-03: Initialize FastAPI backend project structure, CORS middleware, and health check endpoint
+- [x] 01-01: Initialize Next.js 15 project with Tailwind CSS, shadcn/ui, Lucide icons, and MakeMyTrip theme palette
+- [x] 01-03: Initialize FastAPI backend project structure, CORS middleware, and health check endpoint
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02: Build responsive global navigation bar, MakeMyTrip Hero search interface, and category quick tabs
+- [x] 01-02: Build responsive global navigation bar, MakeMyTrip Hero search interface, and category quick tabs
 
 ### Phase 2: Authentication & Citizen Profile Management
 
