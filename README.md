@@ -1,4 +1,4 @@
-# CivicPilot 🏛️✈️
+# CivicPilot 
 
 > **Autonomous AI Public Service Platform for Citizens**  
 > *Transforming bureaucratic hurdles into a seamless, guided consumer travel experience inspired by MakeMyTrip.*
@@ -14,7 +14,7 @@
 
 ---
 
-## 🌟 Executive Summary
+## Executive Summary
 
 **CivicPilot** is an autonomous AI public service agent that discovers relevant government schemes, verifies citizen eligibility against official published guidelines, inspects and prepares application forms, and navigates complex government portals on behalf of citizens. 
 
@@ -31,7 +31,7 @@ Instead of an informational chatbot that gives text instructions, CivicPilot pro
 
 ---
 
-## ⚖️ Zero Dummy Data & Integrity Policy
+## Zero Dummy Data & Integrity Policy
 
 CivicPilot operates under an unyielding **Zero Dummy Data** standard:
 1. **Official Sources Only:** Every scheme, portal URL, department title, and eligibility criteria cited originates from authentic government platforms (National Scholarship Portal, PM-Kisan Samman Nidhi, Ayushman Bharat PM-JAY, Parivahan Sarathi).
@@ -40,7 +40,7 @@ CivicPilot operates under an unyielding **Zero Dummy Data** standard:
 
 ---
 
-## 🏗️ System Architecture & Dataflow
+## System Architecture & Dataflow
 
 CivicPilot couples a high-performance **FastAPI asynchronous backend** with an elevated **Next.js 15 App Router frontend**, synchronized via bi-directional WebSockets and bounded state machine graphs.
 
@@ -122,7 +122,7 @@ flowchart TD
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 CivicPilot/
@@ -155,7 +155,7 @@ CivicPilot/
 
 ---
 
-## 🚀 Quickstart & Installation
+## Quickstart & Installation
 
 ### Prerequisites
 - **Node.js**: v18.17+ or v20+
@@ -246,7 +246,7 @@ npm run dev
 
 ---
 
-## 🧪 Verification & Automated Testing
+## Verification & Automated Testing
 
 CivicPilot comes with a comprehensive suite of **79 automated backend unit, integration, and E2E tests**, alongside a clean Next.js 15 App Router production compilation.
 
@@ -286,7 +286,7 @@ Route (app)                                 Size  First Load JS
 
 ---
 
-## 🎬 5-Minute Guided Demonstration Script (For Evaluators)
+## 5-Minute Guided Demonstration Script (For Evaluators)
 
 Follow this step-by-step walkthrough to experience the complete citizen lifecycle:
 
@@ -337,7 +337,7 @@ Follow this step-by-step walkthrough to experience the complete citizen lifecycl
 
 ---
 
-## 🔒 Statutory, Legal & Privacy Compliance
+## Statutory, Legal & Privacy Compliance
 
 - **Information Technology Act, 2000**: All electronic application preparation, human consent approvals, and synthesized acknowledgement slips comply with provisions under Sections 4, 10A, and 43A of the IT Act, 2000.
 - **Data Protection & Vault Security**: Sensitive citizen identity credentials (Aadhaar, Income Certificates) are encrypted in private storage and strictly isolated by PostgreSQL Row-Level Security (RLS) policies.
@@ -345,7 +345,7 @@ Follow this step-by-step walkthrough to experience the complete citizen lifecycl
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
 CivicPilot is dedicated to empowering citizens and promoting equitable access to public welfare services.
