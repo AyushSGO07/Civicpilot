@@ -200,7 +200,7 @@ class ReceiptGenerator:
 
         # Header Titles
         page.insert_textbox(
-            pymupdf.Rect(25, 38, 570.3, 58),
+            pymupdf.Rect(25, 30, 570.3, 62),
             "GOVERNMENT OF INDIA",
             fontname="helv",
             fontsize=13,
@@ -208,7 +208,7 @@ class ReceiptGenerator:
             align=pymupdf.TEXT_ALIGN_CENTER,
         )
         page.insert_textbox(
-            pymupdf.Rect(25, 59, 570.3, 76),
+            pymupdf.Rect(25, 60, 570.3, 80),
             "NATIONAL PUBLIC SERVICE PORTAL • DIRECT BENEFIT TRANSFER",
             fontname="helv",
             fontsize=8.5,
@@ -216,7 +216,7 @@ class ReceiptGenerator:
             align=pymupdf.TEXT_ALIGN_CENTER,
         )
         page.insert_textbox(
-            pymupdf.Rect(25, 78, 570.3, 100),
+            pymupdf.Rect(25, 80, 570.3, 105),
             "OFFICIAL APPLICATION SUBMISSION ACKNOWLEDGEMENT",
             fontname="helv",
             fontsize=11,
