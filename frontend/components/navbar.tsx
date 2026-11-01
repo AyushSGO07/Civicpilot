@@ -13,9 +13,12 @@ import {
   Sparkles,
   User,
   ArrowRight,
+  LogOut,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/", icon: Compass },
@@ -27,11 +30,18 @@ const NAV_ITEMS = [
 export function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { user, signOut } = useAuth();
 
   // Close mobile drawer on route navigation
   React.useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  const citizenName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split("@")[0] ||
+    "Citizen";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-navy-light/40 bg-navy text-white shadow-md backdrop-blur-md">
@@ -91,17 +101,42 @@ export function Navbar() {
             <span className="lg:hidden">Agent</span>
           </div>
 
-          {/* Sign In CTA */}
-          <Link href="/auth">
-            <Button
-              variant="cyan"
-              size="sm"
-              className="gap-1.5 font-semibold text-xs shadow-sm"
-            >
-              <User className="h-3.5 w-3.5" />
-              Sign In
-            </Button>
-          </Link>
+          {/* User Auth State (D-03) */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              <Link href="/profile">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20 text-xs font-semibold"
+                >
+                  <UserCheck className="h-3.5 w-3.5 text-civic-cyan" />
+                  <span className="max-w-[120px] truncate">{citizenName}</span>
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => signOut()}
+                className="text-slate-300 hover:text-white hover:bg-white/10 p-2"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Link href="/auth">
+              <Button
+                variant="cyan"
+                size="sm"
+                className="gap-1.5 font-semibold text-xs shadow-sm"
+              >
+                <User className="h-3.5 w-3.5" />
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Hamburger Toggle */}
@@ -155,15 +190,40 @@ export function Navbar() {
               </div>
             </div>
 
-            <Link href="/auth" className="w-full">
-              <Button
-                variant="cyan"
-                className="w-full justify-center gap-2 font-semibold"
-              >
-                Sign In / Citizen Portal
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            {user ? (
+              <div className="flex flex-col gap-2">
+                <Link href="/profile" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between border-white/20 bg-white/10 text-white hover:bg-white/20 text-sm font-semibold"
+                  >
+                    <span className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4 text-civic-cyan" />
+                      {citizenName} (Profile)
+                    </span>
+                    <ArrowRight className="h-4 w-4 opacity-70" />
+                  </Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  onClick={() => signOut()}
+                  className="w-full justify-center gap-2 text-red-300 hover:text-red-200 hover:bg-red-950/30 text-sm font-medium"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <Link href="/auth" className="w-full">
+                <Button
+                  variant="cyan"
+                  className="w-full justify-center gap-2 font-semibold"
+                >
+                  Sign In / Citizen Portal
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       )}

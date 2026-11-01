@@ -68,9 +68,9 @@ Plans:
 
 Plans:
 
-- [ ] 02-01: Set up Supabase Auth configuration, database schema (`users`, `citizen_profiles`), and RLS policies
-- [ ] 02-02: Implement authentication pages (login, registration, logout) and session context provider in frontend
-- [ ] 02-03: Implement citizen profile management form (personal, address, educational, voluntary attributes) with FastAPI endpoints
+- [x] 02-01: Set up Supabase Auth configuration, database schema (`users`, `citizen_profiles`), and RLS policies
+- [x] 02-02: Implement authentication pages (login, registration, logout) and session context provider in frontend
+- [x] 02-03: Implement citizen profile management form (personal, address, educational, voluntary attributes) with FastAPI endpoints
 
 ### Phase 3: Secure Document Vault & Multimodal OCR Extraction
 
