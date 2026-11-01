@@ -34,6 +34,14 @@ async def agent_websocket_stream(websocket: WebSocket, session_id: str):
                 await controller.pause()
             elif action == "resume":
                 await controller.resume()
+            elif action == "resolve_challenge":
+                await controller.resume()
+                await websocket_manager.broadcast_milestone(
+                    session_id=session_id,
+                    step="inspection",
+                    message="Security challenge resolved by citizen. Automation resuming.",
+                    level="info",
+                )
             elif action == "stop":
                 await controller.stop()
             elif action == "ping":

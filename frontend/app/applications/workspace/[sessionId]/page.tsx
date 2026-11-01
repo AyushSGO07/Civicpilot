@@ -24,6 +24,7 @@ import {
   RotateCcw,
   User,
   Compass,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -145,6 +146,14 @@ function WorkspaceInner() {
   const [filterLevel, setFilterLevel] = useState<string>("all");
   const [mobileTab, setMobileTab] = useState<"viewport" | "profile" | "logs">("viewport");
   const [showAbortConfirm, setShowAbortConfirm] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [, setApprovalDecision] = useState<"pending" | "approved" | "rejected">("pending");
+  const [securityChallenge, setSecurityChallenge] = useState<{
+    detected: boolean;
+    type: "captcha" | "otp" | "mfa";
+    instructions: string;
+    promptMessage?: string;
+  } | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
@@ -271,8 +280,28 @@ function WorkspaceInner() {
               const idx = EXECUTION_STEPS.findIndex((s) => s.id === data.step);
               if (idx !== -1) setStepIndex(idx);
             }
+            if (data.step === "waiting_approval") {
+              setShowReviewModal(true);
+              setExecutionStatus("paused");
+            } else if (data.step === "waiting_security_challenge") {
+              setSecurityChallenge({
+                detected: true,
+                type: data.challenge_type || "captcha",
+                instructions: data.message || "Please complete the security challenge on the portal screen.",
+                promptMessage: data.details,
+              });
+              setExecutionStatus("paused");
+            }
           } else if (data.type === "screenshot") {
             setScreenshotBase64(data.screenshot_b64);
+          } else if (data.type === "security_challenge") {
+            setSecurityChallenge({
+              detected: true,
+              type: data.challenge_type || "captcha",
+              instructions: data.instructions || "Please complete the security challenge on the portal screen.",
+              promptMessage: data.prompt_message,
+            });
+            setExecutionStatus("paused");
           }
         } catch {
           // Non-JSON frame ignored
@@ -355,6 +384,79 @@ function WorkspaceInner() {
     },
     [sessionId, currentStep, addMilestone]
   );
+
+  // Citizen Approval & Rejection Handlers (HIL-01, HIL-03)
+  const handleApproveSubmission = useCallback(async () => {
+    setApprovalDecision("approved");
+    setShowReviewModal(false);
+    setExecutionStatus("completed");
+    addMilestone(
+      "approval",
+      "Citizen explicitly approved application submission. Application authorized for official portal.",
+      "success"
+    );
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action: "approve" }));
+    }
+    try {
+      await fetch(`${API_BASE_URL}/api/agent/workflow/${sessionId}/approve`, { method: "POST" });
+    } catch {
+      // Offline fallback
+    }
+  }, [sessionId, addMilestone]);
+
+  const handleRejectSubmission = useCallback(
+    async (reason?: string) => {
+      setApprovalDecision("rejected");
+      setShowReviewModal(false);
+      setExecutionStatus("paused");
+      addMilestone(
+        "approval",
+        `Citizen rejected pre-submission review: ${reason || "Return to edit mode"}.`,
+        "warning"
+      );
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ action: "reject" }));
+      }
+      try {
+        await fetch(`${API_BASE_URL}/api/agent/workflow/${sessionId}/reject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision: "rejected", rejection_reason: reason || "Citizen requested edits" }),
+        });
+      } catch {
+        // Offline fallback
+      }
+    },
+    [sessionId, addMilestone]
+  );
+
+  // Security Challenge Resolution Handler (HIL-04)
+  const handleResolveChallenge = useCallback(async () => {
+    const solvedType = securityChallenge?.type || "captcha";
+    setSecurityChallenge(null);
+    setExecutionStatus("active");
+    addMilestone(
+      "checkpoint",
+      `Security challenge (${solvedType.toUpperCase()}) confirmed solved by citizen. Automation unblocked.`,
+      "info"
+    );
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action: "resolve_challenge" }));
+    }
+    try {
+      await fetch(`${API_BASE_URL}/api/agent/workflow/${sessionId}/resolve-challenge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challenge_type: solvedType }),
+      });
+    } catch {
+      // Offline fallback
+    }
+  }, [sessionId, securityChallenge, addMilestone]);
 
   // Keyboard Shortcuts (Space: Pause/Resume, Esc: Abort)
   useEffect(() => {
@@ -458,12 +560,30 @@ function WorkspaceInner() {
         setStepIndex(index);
         addMilestone(step, msg, level, details);
         if (index === 5) {
-          setExecutionStatus("completed");
+          setExecutionStatus("paused");
+          setShowReviewModal(true);
         }
       }, delay);
       simulationTimerRef.current.push(timer);
     });
   }, [service, profile, addMilestone]);
+
+  // Demo trigger for Security Challenge (HIL-04)
+  const triggerSecurityChallengeDemo = useCallback(() => {
+    setSecurityChallenge({
+      detected: true,
+      type: "captcha",
+      instructions:
+        "A security CAPTCHA code is required by the government portal. Please inspect the portal image and enter the characters shown to verify authentic citizen identity.",
+      promptMessage: "Security code verification required on registration form.",
+    });
+    setExecutionStatus("paused");
+    addMilestone(
+      "checkpoint",
+      "Security CAPTCHA challenge intercepted on portal. Pausing automation for citizen input (HIL-04).",
+      "warning"
+    );
+  }, [addMilestone]);
 
   // Clean simulation timers on unmount
   useEffect(() => {
@@ -777,6 +897,37 @@ function WorkspaceInner() {
             </div>
           </div>
 
+          {/* SECURITY CHECKPOINT BANNER (HIL-04) */}
+          {securityChallenge?.detected && (
+            <div className="bg-amber-950/90 border-b border-amber-500/40 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0 animate-in fade-in">
+              <div className="flex items-start gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                  <Lock className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">
+                      Security Checkpoint: {securityChallenge.type.toUpperCase()} Challenge Active
+                    </span>
+                    <Badge variant="warning" className="text-[10px] py-0 px-1.5 font-semibold">
+                      Action Required
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5 max-w-xl leading-relaxed">
+                    {securityChallenge.instructions}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleResolveChallenge}
+                className="bg-civic-blue hover:bg-civic-blue-hover text-white text-xs px-4 h-8 shrink-0 shadow-md shadow-civic-blue/20"
+              >
+                <Play className="h-3.5 w-3.5 mr-1.5 fill-white" />
+                <span>I have completed {securityChallenge.type.toUpperCase()} — Resume</span>
+              </Button>
+            </div>
+          )}
+
           {/* Canvas Viewport Screen (16:10 Aspect Ratio) */}
           <div className="flex-1 relative bg-slate-950 flex items-center justify-center overflow-hidden p-2">
             <div className="w-full h-full max-h-[560px] aspect-[16/10] bg-slate-900 rounded-lg border border-slate-800 relative overflow-hidden flex items-center justify-center shadow-2xl">
@@ -1016,6 +1167,30 @@ function WorkspaceInner() {
                 <Sparkles className="h-3.5 w-3.5 mr-1.5 text-civic-cyan" />
                 <span>Simulate Run</span>
               </Button>
+
+              {/* Pre-Submission Review Modal Trigger (HIL-01, HIL-02) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowReviewModal(true)}
+                className="border-emerald-600/50 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/50 hover:text-white text-xs h-9 shadow-xs"
+                title="Review populated application inputs and grant explicit approval (HIL-01)"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-emerald-400" />
+                <span>Review & Approve</span>
+              </Button>
+
+              {/* Security Challenge Demo Trigger (HIL-04) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={triggerSecurityChallengeDemo}
+                className="border-amber-700/50 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50 text-xs h-9 hidden xl:inline-flex"
+                title="Simulate CAPTCHA checkpoint intervention (HIL-04)"
+              >
+                <Lock className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
+                <span>Simulate CAPTCHA</span>
+              </Button>
             </div>
 
             {/* Keyboard Shortcuts Legend */}
@@ -1215,6 +1390,151 @@ function WorkspaceInner() {
                   className="bg-rose-600 hover:bg-rose-700 text-white text-xs h-8"
                 >
                   Yes, Abort Session
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* PRE-SUBMISSION AUDIT & APPROVAL MODAL (HIL-01, HIL-02, HIL-03) */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="max-w-2xl w-full bg-slate-900 border-slate-800 text-white shadow-2xl rounded-2xl overflow-hidden my-6">
+            <CardHeader className="border-b border-slate-800 bg-slate-950/60 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-white flex items-center gap-2">
+                      <span>Pre-Submission Application Audit</span>
+                      <Badge variant="success" className="text-[10px] py-0 px-2 font-semibold">
+                        HIL Approval Gate
+                      </Badge>
+                    </CardTitle>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Review all populated values before granting final submission authority.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowReviewModal(false)}
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4 pt-4 max-h-[65vh] overflow-y-auto text-xs">
+              {/* Scheme Meta Pill */}
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] text-slate-400 block">Target Scheme</span>
+                  <span className="font-semibold text-white">{service.service_name}</span>
+                </div>
+                <Badge variant="cyan" className="text-[10px]">
+                  {service.category}
+                </Badge>
+              </div>
+
+              {/* Populated Fields Summary Table */}
+              <div>
+                <h4 className="font-semibold text-slate-200 mb-2 flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-civic-cyan" />
+                  <span>Populated Form Attributes (Verified)</span>
+                </h4>
+                <div className="border border-slate-800 rounded-lg overflow-hidden divide-y divide-slate-800 bg-slate-950/40">
+                  <div className="p-2.5 flex items-center justify-between">
+                    <span className="text-slate-400">Full Legal Name</span>
+                    <span className="font-semibold text-white">{profile.full_name}</span>
+                  </div>
+                  <div className="p-2.5 flex items-center justify-between">
+                    <span className="text-slate-400">Date of Birth</span>
+                    <span className="text-slate-200 font-medium">{profile.date_of_birth}</span>
+                  </div>
+                  <div className="p-2.5 flex items-center justify-between">
+                    <span className="text-slate-400">Gender</span>
+                    <span className="text-slate-200 font-medium">{profile.gender}</span>
+                  </div>
+                  <div className="p-2.5 flex items-center justify-between">
+                    <span className="text-slate-400">Registered Mobile</span>
+                    <span className="text-slate-200 font-medium">{profile.contact_number}</span>
+                  </div>
+                  <div className="p-2.5 flex items-center justify-between">
+                    <span className="text-slate-400">State of Domicile</span>
+                    <span className="text-slate-200 font-medium">
+                      {profile.domicile_state} (PIN: {profile.pin_code})
+                    </span>
+                  </div>
+                  <div className="p-2.5 flex items-center justify-between">
+                    <span className="text-slate-400">Annual Family Income</span>
+                    <span className="font-bold text-emerald-400">
+                      ₹{Number(profile.annual_income).toLocaleString("en-IN")} / year
+                    </span>
+                  </div>
+                  <div className="p-2.5 flex items-center justify-between">
+                    <span className="text-slate-400">Social Category</span>
+                    <span className="text-slate-200 font-medium">{profile.social_category}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attached Vault Documents */}
+              <div>
+                <h4 className="font-semibold text-slate-200 mb-2 flex items-center gap-1.5">
+                  <FileCheck2 className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Attached Vault Certificates ({service.required_documents.length})</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {service.required_documents.map((doc, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileCheck2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span className="truncate font-medium text-slate-200">{doc}</span>
+                      </div>
+                      <Badge variant="success" className="text-[9px] py-0 px-1.5 shrink-0">
+                        Verified
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Statutory Legal Advisory Disclaimer */}
+              <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200/90 leading-relaxed space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Statutory Consent Advisory</span>
+                </div>
+                <p>
+                  By approving this submission, you explicitly authorize CivicPilot to execute the
+                  final application submission on your behalf on the official portal. Unapproved
+                  applications will remain in review mode without transmitting data.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <Button
+                  variant="outline"
+                  onClick={() => handleRejectSubmission("Citizen requested review revisions")}
+                  className="w-full sm:w-auto border-slate-700 text-slate-300 hover:bg-slate-800 text-xs h-9"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                  <span>Reject & Return to Edit</span>
+                </Button>
+                <Button
+                  onClick={handleApproveSubmission}
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-5 shadow-lg shadow-emerald-600/20"
+                >
+                  <ShieldCheck className="h-4 w-4 mr-1.5" />
+                  <span>Approve & Authorize Submission</span>
                 </Button>
               </div>
             </CardContent>

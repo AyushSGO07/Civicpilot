@@ -9,6 +9,8 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
 from app.models.workflow import AgentWorkflowState, WorkflowStep
+from app.models.approval import PreSubmissionSummary, PopulatedFormField, AttachedVaultDocument
+from app.models.security_challenge import SecurityChallengeInfo
 from app.models.agent import SanitizedDOMTree
 from app.models.profile import CitizenProfileBase
 from app.models.form_filling import FormFillPlan, FormExecutionResult
@@ -17,6 +19,9 @@ from app.services.browser_manager import browser_manager
 from app.services.dom_inspector import DOMInspector
 from app.services.field_mapper import DynamicFieldMapper
 from app.services.form_executor import FormActionExecutor
+from app.services.security_detector import SecurityChallengeDetector
+from app.services.execution_controller import controller_registry
+from app.services.websocket_manager import websocket_manager
 
 
 def _add_log(state: AgentWorkflowState, message: str, level: str = "info") -> None:
@@ -119,6 +124,30 @@ async def inspect_node(state: AgentWorkflowState) -> AgentWorkflowState:
         state,
         f"Inspected DOM: found {tree.interactive_elements_count} interactive form elements across {tree.forms_count} form(s)",
     )
+
+    # Check for security challenges (CAPTCHA / OTP / MFA) (HIL-04)
+    if not state.get("challenge_resolved"):
+        challenge = SecurityChallengeDetector.detect_challenge(dom_tree=tree)
+        if challenge.detected:
+            state["security_challenge"] = challenge.model_dump()
+            _add_log(
+                state,
+                f"Security challenge intercepted: {challenge.challenge_type.upper()} detected. Pausing automation for citizen input (HIL-04).",
+                level="warning",
+            )
+            if session_id:
+                try:
+                    session_controller = controller_registry.get_or_create(session_id)
+                    await session_controller.pause()
+                    await websocket_manager.broadcast_milestone(
+                        session_id=session_id,
+                        step="waiting_security_challenge",
+                        message=challenge.instructions,
+                        level="warning",
+                    )
+                except Exception:
+                    pass
+
     return state
 
 
@@ -232,15 +261,119 @@ async def human_assistance_node(state: AgentWorkflowState) -> AgentWorkflowState
 
 
 async def waiting_approval_node(state: AgentWorkflowState) -> AgentWorkflowState:
-    """All form fields populated; pauses for human-in-the-loop review and approval (HIL-01)."""
+    """All form fields populated; compiles pre-submission summary and pauses for human review (HIL-01, HIL-02)."""
     state["current_step"] = "waiting_approval"
-    _add_log(state, "Form filling completed. Pausing automation for citizen pre-submission review.")
+
+    # Compile PreSubmissionSummary
+    service_id = state.get("service_id", "")
+    service = get_service_by_id(service_id)
+    service_name = service.service_name if service else service_id
+    portal_url = state.get("portal_url", "")
+
+    populated_fields = []
+    attached_documents = []
+
+    fill_plan = state.get("fill_plan", {})
+    actions = fill_plan.get("actions", []) if isinstance(fill_plan, dict) else []
+
+    for act in actions:
+        if act.get("action_type") == "upload_file":
+            attached_documents.append(
+                AttachedVaultDocument(
+                    document_name=act.get("element_label") or act.get("source_attribute", "Vault Document"),
+                    document_type=act.get("source_attribute", "Document"),
+                    vault_id=str(act.get("value_to_fill", "vault_file")),
+                    verified=True,
+                )
+            )
+        else:
+            populated_fields.append(
+                PopulatedFormField(
+                    field_label=act.get("element_label") or act.get("element_name") or act.get("source_attribute", "Field"),
+                    element_name=act.get("element_name", "input"),
+                    locator=act.get("locator", ""),
+                    value_populated=str(act.get("value_to_fill", "")),
+                    source_attribute=act.get("source_attribute", ""),
+                    confidence=act.get("confidence", 1.0),
+                )
+            )
+
+    # Include any additional vault docs attached in state
+    vault_docs = state.get("vault_documents", [])
+    if isinstance(vault_docs, list) and not attached_documents:
+        for doc in vault_docs:
+            if isinstance(doc, dict):
+                attached_documents.append(
+                    AttachedVaultDocument(
+                        document_name=doc.get("document_name") or doc.get("category", "Document"),
+                        document_type=doc.get("category", "Document"),
+                        vault_id=str(doc.get("id") or doc.get("file_path", "vault_doc")),
+                        verified=doc.get("status") == "verified" if "status" in doc else True,
+                    )
+                )
+
+    summary = PreSubmissionSummary(
+        service_id=service_id,
+        service_name=service_name,
+        portal_url=portal_url,
+        populated_fields=populated_fields,
+        attached_documents=attached_documents,
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        total_fields=len(populated_fields),
+        all_mandatory_satisfied=True,
+    )
+    state["pre_submission_summary"] = summary.model_dump()
+    _add_log(
+        state,
+        f"Pre-submission audit compiled ({len(populated_fields)} fields, {len(attached_documents)} documents). Pausing automation for citizen authorization (HIL-01).",
+    )
+    return state
+
+
+async def submit_node(state: AgentWorkflowState) -> AgentWorkflowState:
+    """Citizen approved submission; transitions to submission-ready state (HIL-03)."""
+    state["current_step"] = "submission_ready"
+    _add_log(state, "Citizen approved application submission. Proceeding with portal submission authorization.")
+    return state
+
+
+async def rejected_node(state: AgentWorkflowState) -> AgentWorkflowState:
+    """Citizen rejected submission; halts automation and returns to editing mode (HIL-03)."""
+    state["current_step"] = "submission_rejected"
+    reason = state.get("rejection_reason") or "Application rejected by citizen"
+    _add_log(state, f"Submission rejected by citizen: {reason}. Returning to edit mode.", level="warning")
+    return state
+
+
+async def waiting_security_challenge_node(state: AgentWorkflowState) -> AgentWorkflowState:
+    """Security challenge active; pauses workflow until citizen completes challenge (HIL-04)."""
+    state["current_step"] = "waiting_security_challenge"
+    _add_log(
+        state,
+        "Automation suspended at security checkpoint. Waiting for citizen to solve CAPTCHA or enter OTP (HIL-04).",
+        level="warning",
+    )
     return state
 
 
 # -------------------------------------------------------------------------
 # Conditional Routing Functions
 # -------------------------------------------------------------------------
+
+def route_after_inspect(state: AgentWorkflowState) -> str:
+    """Check whether a security challenge was detected during inspection."""
+    challenge = state.get("security_challenge")
+    if challenge and challenge.get("detected") and not state.get("challenge_resolved"):
+        return "waiting_security_challenge"
+    return "map"
+
+
+def route_after_security_challenge(state: AgentWorkflowState) -> str:
+    """Determine whether challenge is resolved or workflow remains paused."""
+    if state.get("challenge_resolved"):
+        return "map"
+    return "pause"
+
 
 def route_after_validation(state: AgentWorkflowState) -> str:
     """Determine next node after validation based on error count and retry thresholds."""
@@ -263,6 +396,16 @@ def route_after_recovery(state: AgentWorkflowState) -> str:
     return "inspect"
 
 
+def route_after_approval(state: AgentWorkflowState) -> str:
+    """Determine whether to proceed with submission, abort, or stay paused."""
+    decision = state.get("approval_decision")
+    if decision == "approved":
+        return "submit"
+    elif decision == "rejected":
+        return "rejected"
+    return "pause"
+
+
 # -------------------------------------------------------------------------
 # Graph Compilation with Checkpointer
 # -------------------------------------------------------------------------
@@ -281,12 +424,36 @@ def build_agent_workflow() -> Any:
     workflow.add_node("recovery", recovery_node)
     workflow.add_node("human_assistance", human_assistance_node)
     workflow.add_node("waiting_approval", waiting_approval_node)
+    workflow.add_node("waiting_security_challenge", waiting_security_challenge_node)
+    workflow.add_node("submit", submit_node)
+    workflow.add_node("rejected", rejected_node)
 
     # Linear Execution Edges
     workflow.add_edge(START, "discover")
     workflow.add_edge("discover", "navigate")
     workflow.add_edge("navigate", "inspect")
-    workflow.add_edge("inspect", "map")
+
+    # Conditional Routing from Inspect (Security Checkpoint detection - HIL-04)
+    workflow.add_conditional_edges(
+        "inspect",
+        route_after_inspect,
+        {
+            "waiting_security_challenge": "waiting_security_challenge",
+            "map": "map",
+        },
+    )
+
+    # Conditional Routing from Security Challenge Pause Gate
+    workflow.add_conditional_edges(
+        "waiting_security_challenge",
+        route_after_security_challenge,
+        {
+            "map": "map",
+            "pause": END,
+        },
+    )
+
+    # Downstream filling & validation edges
     workflow.add_edge("map", "fill")
     workflow.add_edge("fill", "validate")
 
@@ -311,9 +478,21 @@ def build_agent_workflow() -> Any:
         },
     )
 
+    # Conditional Routing from Waiting Approval (HIL-01, HIL-03)
+    workflow.add_conditional_edges(
+        "waiting_approval",
+        route_after_approval,
+        {
+            "submit": "submit",
+            "rejected": "rejected",
+            "pause": END,
+        },
+    )
+
     # Termination Edges
     workflow.add_edge("human_assistance", END)
-    workflow.add_edge("waiting_approval", END)
+    workflow.add_edge("submit", END)
+    workflow.add_edge("rejected", END)
 
     # Checkpoint Persistence
     checkpointer = MemorySaver()

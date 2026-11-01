@@ -21,6 +21,15 @@ from app.models.workflow import (
     WorkflowStateResponse,
     AgentWorkflowState,
 )
+from app.models.approval import (
+    PreSubmissionSummary,
+    ApprovalDecisionRequest,
+    ApprovalDecisionResponse,
+)
+from app.models.security_challenge import (
+    ResolveChallengeRequest,
+    ResolveChallengeResponse,
+)
 from app.services.browser_manager import browser_manager
 from app.services.dom_inspector import DOMInspector
 from app.services.field_mapper import DynamicFieldMapper
@@ -367,6 +376,9 @@ async def get_workflow_state(thread_id: str):
         screenshot_base64=values.get("screenshot_base64"),
         execution_result=values.get("execution_result"),
         fill_plan=values.get("fill_plan"),
+        pre_submission_summary=values.get("pre_submission_summary"),
+        approval_decision=values.get("approval_decision"),
+        rejection_reason=values.get("rejection_reason"),
     )
 
 
@@ -402,4 +414,142 @@ async def resume_workflow(thread_id: str):
         screenshot_base64=final_state.get("screenshot_base64"),
         execution_result=final_state.get("execution_result"),
         fill_plan=final_state.get("fill_plan"),
+        pre_submission_summary=final_state.get("pre_submission_summary"),
+        approval_decision=final_state.get("approval_decision"),
+        rejection_reason=final_state.get("rejection_reason"),
+    )
+
+
+@router.get(
+    "/workflow/{thread_id}/summary",
+    response_model=PreSubmissionSummary,
+    summary="Retrieve pre-submission summary of all populated form values and vault documents (HIL-02)",
+)
+async def get_workflow_summary(thread_id: str):
+    """Retrieve structured pre-submission audit for human review."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await agent_workflow_app.aget_state(config)
+
+    if not snapshot or not snapshot.values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workflow thread '{thread_id}' not found in checkpointer",
+        )
+
+    summary = snapshot.values.get("pre_submission_summary")
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Pre-submission summary has not yet been compiled for thread '{thread_id}'",
+        )
+
+    return PreSubmissionSummary(**summary)
+
+
+@router.post(
+    "/workflow/{thread_id}/approve",
+    response_model=ApprovalDecisionResponse,
+    summary="Citizen grants explicit approval to submit application (HIL-01, HIL-03)",
+)
+async def approve_workflow_submission(thread_id: str):
+    """Grant explicit user authorization to submit the completed application."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await agent_workflow_app.aget_state(config)
+
+    if not snapshot or not snapshot.values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workflow thread '{thread_id}' not found in checkpointer",
+        )
+
+    # Update state with citizen approval decision
+    await agent_workflow_app.aupdate_state(
+        config,
+        {"approval_decision": "approved", "rejection_reason": None},
+    )
+
+    # Resume workflow from waiting_approval to submit_node
+    final_state = await agent_workflow_app.ainvoke(None, config=config)
+
+    return ApprovalDecisionResponse(
+        thread_id=thread_id,
+        status="approved",
+        decision="approved",
+        message="Application submission authorized by citizen. Ready for official portal submission.",
+        current_step=final_state.get("current_step", "submission_ready"),
+    )
+
+
+@router.post(
+    "/workflow/{thread_id}/reject",
+    response_model=ApprovalDecisionResponse,
+    summary="Citizen rejects application submission to edit or cancel (HIL-03)",
+)
+async def reject_workflow_submission(thread_id: str, request: Optional[ApprovalDecisionRequest] = None):
+    """Reject application submission and return workflow to review or editing mode."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await agent_workflow_app.aget_state(config)
+
+    if not snapshot or not snapshot.values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workflow thread '{thread_id}' not found in checkpointer",
+        )
+
+    reason = request.rejection_reason if request else "Rejected by citizen"
+
+    # Update state with citizen rejection decision
+    await agent_workflow_app.aupdate_state(
+        config,
+        {"approval_decision": "rejected", "rejection_reason": reason},
+    )
+
+    # Resume workflow from waiting_approval to rejected_node
+    final_state = await agent_workflow_app.ainvoke(None, config=config)
+
+    return ApprovalDecisionResponse(
+        thread_id=thread_id,
+        status="rejected",
+        decision="rejected",
+        message=f"Application submission rejected: {reason}",
+        current_step=final_state.get("current_step", "submission_rejected"),
+    )
+
+
+@router.post(
+    "/workflow/{thread_id}/resolve-challenge",
+    response_model=ResolveChallengeResponse,
+    summary="Citizen confirms completion of security challenge (CAPTCHA / OTP / MFA) (HIL-04)",
+)
+async def resolve_workflow_challenge(
+    thread_id: str,
+    request: Optional[ResolveChallengeRequest] = None,
+):
+    """Confirm security challenge resolution and resume workflow from paused checkpoint."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await agent_workflow_app.aget_state(config)
+
+    if not snapshot or not snapshot.values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workflow thread '{thread_id}' not found in checkpointer",
+        )
+
+    # Mark challenge as resolved in LangGraph state
+    await agent_workflow_app.aupdate_state(
+        config,
+        {
+            "challenge_resolved": True,
+            "security_challenge": None,
+        },
+    )
+
+    # Resume workflow from checkpoint
+    final_state = await agent_workflow_app.ainvoke(None, config=config)
+
+    return ResolveChallengeResponse(
+        thread_id=thread_id,
+        status="resumed",
+        message="Security challenge resolved by citizen. Automation resumed.",
+        challenge_resolved=True,
     )

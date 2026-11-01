@@ -20,7 +20,7 @@ CivicPilot transforms public service bureaucracy into a guided, autonomous consu
 - [x] **Phase 7: Dynamic Field Mapping & Form Filling Engine** - Dynamic Gemini field mapping and automated multi-step form population
 - [x] **Phase 8: LangGraph Workflow Orchestration & Bounded Recovery** - Stateful workflow state machine with checkpointing and bounded retries
 - [x] **Phase 9: Real-time Agent Execution Workspace & WebSockets** - 3-panel operations dashboard, live browser streaming, and controls
-- [ ] **Phase 10: Human-in-the-Loop Approval & Security Checkpoints** - Pre-submission summary, explicit approval gate, and CAPTCHA/OTP pause
+- [x] **Phase 10: Human-in-the-Loop Approval & Security Checkpoints** - Pre-submission summary, explicit approval gate, and CAPTCHA/OTP pause
 - [ ] **Phase 11: Submission Verification, Receipt Retrieval & Application Tracking** - Authentic reference capture, PDF receipt storage, and My Applications dashboard
 - [ ] **Phase 12: End-to-End Integration, Demonstration Polish & Production Hardening** - Complete live flow verification on target portals and documentation
 
@@ -228,8 +228,8 @@ Plans:
 
 Plans:
 
-- [ ] 10-01: Implement pre-submission approval state in LangGraph with form values payload and frontend review modal
-- [ ] 10-02: Implement security challenge detector (CAPTCHA/OTP/MFA) that pauses automation and prompts citizen intervention
+- [x] 10-01: Implement pre-submission approval state in LangGraph with form values payload and frontend review modal
+- [x] 10-02: Implement security challenge detector (CAPTCHA/OTP/MFA) that pauses automation and prompts citizen intervention
 
 ### Phase 11: Submission Verification, Receipt Retrieval & Application Tracking
 

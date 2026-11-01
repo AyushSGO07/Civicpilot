@@ -14,6 +14,9 @@ WorkflowStep = Literal[
     "validation",
     "recovery",
     "waiting_approval",
+    "waiting_security_challenge",
+    "submission_ready",
+    "submission_rejected",
     "human_assistance",
     "completed",
     "failed",
@@ -33,6 +36,11 @@ class AgentWorkflowState(TypedDict, total=False):
     dom_tree: Optional[Dict[str, Any]]
     fill_plan: Optional[Dict[str, Any]]
     execution_result: Optional[Dict[str, Any]]
+    pre_submission_summary: Optional[Dict[str, Any]]
+    approval_decision: Optional[str]
+    rejection_reason: Optional[str]
+    security_challenge: Optional[Dict[str, Any]]
+    challenge_resolved: bool
     error_count: int
     max_retries: int
     error_message: Optional[str]
@@ -67,3 +75,8 @@ class WorkflowStateResponse(BaseModel):
     screenshot_base64: Optional[str] = Field(None, description="Latest browser visual snapshot buffer")
     execution_result: Optional[Dict[str, Any]] = Field(None, description="Form fill action execution audit")
     fill_plan: Optional[Dict[str, Any]] = Field(None, description="Planned action mapping")
+    pre_submission_summary: Optional[Dict[str, Any]] = Field(None, description="Pre-submission review audit")
+    approval_decision: Optional[str] = Field(None, description="Citizen decision: 'approved' or 'rejected'")
+    rejection_reason: Optional[str] = Field(None, description="Explanation if rejected by citizen")
+    security_challenge: Optional[Dict[str, Any]] = Field(None, description="Active security challenge if any")
+    challenge_resolved: bool = Field(False, description="Whether detected security challenge has been solved")
