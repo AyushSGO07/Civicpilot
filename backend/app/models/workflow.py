@@ -16,6 +16,7 @@ WorkflowStep = Literal[
     "waiting_approval",
     "waiting_security_challenge",
     "submission_ready",
+    "submitted",
     "submission_rejected",
     "human_assistance",
     "completed",
@@ -47,6 +48,11 @@ class AgentWorkflowState(TypedDict, total=False):
     dialog_messages: List[str]
     logs: List[Dict[str, Any]]
     screenshot_base64: Optional[str]
+    application_id: Optional[str]
+    acknowledgement_number: Optional[str]
+    submission_timestamp: Optional[str]
+    receipt_path: Optional[str]
+    receipt_url: Optional[str]
 
 
 class WorkflowStartRequest(BaseModel):
