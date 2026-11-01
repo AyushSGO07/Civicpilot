@@ -80,3 +80,36 @@ CREATE POLICY "Users can update own documents"
 CREATE POLICY "Users can delete own documents"
     ON public.documents FOR DELETE
     USING (auth.uid() = user_id);
+
+
+-- CivicPilot PostgreSQL Schema: Government Services & Schemes
+-- Authoritative catalog of verified Indian central and state schemes
+
+CREATE TABLE IF NOT EXISTS public.government_services (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    service_name TEXT NOT NULL,
+    department TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL CHECK (category IN (
+        'Education', 'Scholarships', 'Identity & Documents', 'Transport',
+        'Agriculture', 'Healthcare', 'Business & MSME', 'Financial Assistance', 'Other'
+    )),
+    state TEXT DEFAULT 'Central',
+    eligibility_summary TEXT NOT NULL,
+    eligibility_criteria JSONB DEFAULT '{}'::jsonb,
+    required_documents TEXT[] DEFAULT ARRAY[]::TEXT[],
+    official_source_url TEXT NOT NULL,
+    official_application_url TEXT NOT NULL,
+    application_deadline TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.government_services ENABLE ROW LEVEL SECURITY;
+
+-- Public read access for active government services
+CREATE POLICY "Anyone can view active government services"
+    ON public.government_services FOR SELECT
+    USING (is_active = TRUE);

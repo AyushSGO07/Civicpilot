@@ -110,8 +110,8 @@ Plans:
 
 Plans:
 
-- [ ] 04-01: Build backend government service ingestion and search engine querying verified official datasets with caching
-- [ ] 04-02: Implement Explore Services page with category tabs, search filter, and MakeMyTrip-style service card deck
+- [x] 04-01: Build backend government service ingestion and search engine querying verified official datasets with caching
+- [x] 04-02: Implement Explore Services page with category tabs, search filter, and MakeMyTrip-style service card deck
 
 ### Phase 5: AI Eligibility Assessment Engine
 

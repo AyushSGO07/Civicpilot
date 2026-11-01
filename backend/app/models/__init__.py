@@ -10,6 +10,10 @@ from app.models.document import (
     DocumentResponse,
     ConfirmExtractedRequest,
 )
+from app.models.service import (
+    GovernmentServiceBase,
+    GovernmentServiceResponse,
+)
 
 __all__ = [
     "CitizenProfileBase",
@@ -18,4 +22,6 @@ __all__ = [
     "DocumentBase",
     "DocumentResponse",
     "ConfirmExtractedRequest",
+    "GovernmentServiceBase",
+    "GovernmentServiceResponse",
 ]
