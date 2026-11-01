@@ -5,9 +5,17 @@ from app.models.profile import (
     CitizenProfileUpdate,
     CitizenProfileResponse,
 )
+from app.models.document import (
+    DocumentBase,
+    DocumentResponse,
+    ConfirmExtractedRequest,
+)
 
 __all__ = [
     "CitizenProfileBase",
     "CitizenProfileUpdate",
     "CitizenProfileResponse",
+    "DocumentBase",
+    "DocumentResponse",
+    "ConfirmExtractedRequest",
 ]

@@ -38,3 +38,45 @@ CREATE POLICY "Users can insert their own profile"
 CREATE POLICY "Users can update their own profile"
     ON public.citizen_profiles FOR UPDATE
     USING (auth.uid() = id);
+
+
+-- CivicPilot PostgreSQL Schema: Citizen Documents
+-- Stored in private bucket 'citizen-vault', metadata in public.documents
+
+CREATE TABLE IF NOT EXISTS public.documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    document_name TEXT NOT NULL,
+    document_type TEXT NOT NULL CHECK (document_type IN (
+        'Aadhaar Card', 'PAN Card', 'Income Certificate', 'Caste Certificate',
+        'Domicile Certificate', 'Academic Marksheet', 'Bonafide Certificate',
+        'Passport Photo', 'Bank Passbook', 'Other'
+    )),
+    mime_type TEXT NOT NULL CHECK (mime_type IN ('application/pdf', 'image/jpeg', 'image/png')),
+    file_size_bytes BIGINT NOT NULL CHECK (file_size_bytes <= 10485760),
+    storage_path TEXT NOT NULL,
+    extracted_information JSONB DEFAULT '{}'::jsonb,
+    verification_status TEXT DEFAULT 'Unverified' CHECK (verification_status IN ('Unverified', 'Extracted', 'Verified', 'Rejected')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies: Citizens can only manage their own documents
+CREATE POLICY "Users can view own documents"
+    ON public.documents FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own documents"
+    ON public.documents FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own documents"
+    ON public.documents FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own documents"
+    ON public.documents FOR DELETE
+    USING (auth.uid() = user_id);

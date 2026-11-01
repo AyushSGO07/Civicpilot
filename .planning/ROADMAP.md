@@ -89,9 +89,9 @@ Plans:
 
 Plans:
 
-- [ ] 03-01: Configure Supabase Storage private vault bucket and `documents` database table with signed URL generation
-- [ ] 03-02: Implement document upload, list, preview, and delete UI in Document Vault page
-- [ ] 03-03: Integrate Google GenAI SDK to perform multimodal OCR extraction and provide an interactive verification modal
+- [x] 03-01: Configure Supabase Storage private vault bucket and `documents` database table with signed URL generation
+- [x] 03-02: Implement document upload, list, preview, and delete UI in Document Vault page
+- [x] 03-03: Integrate Google GenAI SDK to perform multimodal OCR extraction and provide an interactive verification modal
 
 ### Phase 4: Live Government Scheme Discovery & Search
 
