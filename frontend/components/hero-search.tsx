@@ -28,13 +28,6 @@ export const CATEGORIES = [
   { id: "identity-docs", label: "Identity & Documents", icon: FileText },
 ];
 
-export const QUERY_CHIPS = [
-  "Find scholarships for engineering students",
-  "Renew driving licence",
-  "Small business MSME subsidy",
-  "Subsidies for farmers in Bihar",
-];
-
 export function HeroSearch() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
@@ -48,11 +41,6 @@ export function HeroSearch() {
     if (activeCategory && activeCategory !== "all") params.set("category", activeCategory);
 
     router.push(`/services${params.toString() ? `?${params.toString()}` : ""}`);
-  };
-
-  const handleChipClick = (suggestion: string) => {
-    setQuery(suggestion);
-    router.push(`/services?q=${encodeURIComponent(suggestion)}`);
   };
 
   const handleCategorySelect = (categoryId: string) => {
@@ -159,24 +147,6 @@ export function HeroSearch() {
               </Button>
             </div>
           </form>
-
-          {/* Clickable Query Suggestion Chips */}
-          <div className="mt-4 flex flex-wrap items-center gap-2 pt-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1">
-              Popular:
-            </span>
-            {QUERY_CHIPS.map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => handleChipClick(chip)}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/90 px-3 py-1 text-xs font-medium text-slate-600 transition-all hover:border-civic-blue/50 hover:bg-civic-blue-light hover:text-civic-blue cursor-pointer"
-              >
-                <span>{chip}</span>
-                <ArrowRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100 text-civic-blue" />
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </section>
