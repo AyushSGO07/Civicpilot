@@ -124,7 +124,7 @@ const DEMO_APPLICATIONS: ApplicationRecord[] = [
   },
 ];
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { API_BASE_URL } from "@/lib/api-config";
 
 export default function ApplicationsDashboardPage() {
   const [applications, setApplications] = useState<ApplicationRecord[]>(DEMO_APPLICATIONS);

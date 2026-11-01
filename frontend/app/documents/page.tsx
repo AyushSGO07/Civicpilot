@@ -61,8 +61,7 @@ const FILTER_CATEGORIES = [
   "Other",
 ] as const;
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+import { API_BASE_URL } from "@/lib/api-config";
 
 const FIELD_LABELS: Record<string, string> = {
   full_name: "Legal Full Name",

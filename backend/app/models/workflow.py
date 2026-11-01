@@ -60,6 +60,7 @@ class WorkflowStartRequest(BaseModel):
 
     service_id: str = Field(..., description="Target government scheme identifier")
     session_id: Optional[str] = Field(None, description="Optional existing browser session ID")
+    thread_id: Optional[str] = Field(None, description="Optional LangGraph execution thread ID")
     portal_url_override: Optional[str] = Field(None, description="Optional custom portal URL (e.g. for testing)")
     custom_profile: Optional[Dict[str, Any]] = Field(None, description="Optional citizen profile override")
     custom_vault_documents: Optional[List[Dict[str, Any]]] = Field(None, description="Optional document vault override")

@@ -30,7 +30,15 @@ async def agent_websocket_stream(websocket: WebSocket, session_id: str):
             data = await websocket.receive_json()
             action = data.get("action", "").lower()
 
-            if action == "pause":
+            if action == "start":
+                await controller.resume()
+                await websocket_manager.broadcast_milestone(
+                    session_id=session_id,
+                    step="discovery",
+                    message="Agent execution started. Initializing browser workflow.",
+                    level="info",
+                )
+            elif action == "pause":
                 await controller.pause()
             elif action == "resume":
                 await controller.resume()
@@ -50,6 +58,18 @@ async def agent_websocket_stream(websocket: WebSocket, session_id: str):
         websocket_manager.disconnect(session_id, websocket)
     except Exception:
         websocket_manager.disconnect(session_id, websocket)
+
+
+@router.post(
+    "/agent/{session_id}/start",
+    response_model=ControlActionResponse,
+    summary="Start active agent browser execution via HTTP",
+)
+async def http_start_agent(session_id: str):
+    """Start browser execution via HTTP POST."""
+    controller = controller_registry.get_or_create(session_id)
+    await controller.resume()
+    return ControlActionResponse(session_id=session_id, status="active", message="Agent execution initiated")
 
 
 @router.post(

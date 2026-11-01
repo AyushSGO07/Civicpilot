@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Search,
   ExternalLink,
-  GraduationCap,
   Award,
   FileText,
   Car,
@@ -46,18 +45,16 @@ export interface GovernmentService {
 
 const CATEGORY_TABS = [
   { id: "all", label: "All Schemes", icon: Layers },
-  { id: "scholarships", label: "Scholarships", icon: Award },
-  { id: "education", label: "Education", icon: GraduationCap },
-  { id: "identity-docs", label: "Identity & Docs", icon: FileText },
-  { id: "transport", label: "Transport", icon: Car },
-  { id: "agriculture", label: "Agriculture", icon: Sprout },
+  { id: "scholarships", label: "Scholarships & Education", icon: Award },
+  { id: "agriculture", label: "Agriculture & Farmers", icon: Sprout },
   { id: "healthcare", label: "Healthcare", icon: HeartPulse },
+  { id: "transport", label: "Transport", icon: Car },
   { id: "business-msme", label: "Business & MSME", icon: Building2 },
   { id: "financial-assistance", label: "Financial Assistance", icon: Banknote },
+  { id: "identity-docs", label: "Identity & Docs", icon: FileText },
 ];
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+import { API_BASE_URL } from "@/lib/api-config";
 
 // Fallback seed services if backend is offline during development/review
 const FALLBACK_SCHEMES: GovernmentService[] = [
@@ -224,11 +221,16 @@ function ExploreServicesContent() {
     let filtered = [...FALLBACK_SCHEMES];
 
     if (catParam && catParam !== "all") {
-      filtered = filtered.filter(
-        (s) =>
-          s.category.toLowerCase().includes(catParam.toLowerCase()) ||
-          catParam.toLowerCase().includes(s.category.toLowerCase())
-      );
+      const catLower = catParam.toLowerCase();
+      filtered = filtered.filter((s) => {
+        const itemCat = s.category.toLowerCase();
+        return (
+          itemCat.includes(catLower) ||
+          catLower.includes(itemCat) ||
+          (catLower === "education" && itemCat.includes("scholarship")) ||
+          (catLower === "scholarships" && s.service_name.toLowerCase().includes("scholarship"))
+        );
+      });
     }
 
     if (stateParam && stateParam !== "all" && stateParam !== "Central") {
@@ -253,9 +255,15 @@ function ExploreServicesContent() {
   };
 
   useEffect(() => {
-    fetchServices(query, activeCategory, selectedState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory, selectedState, fetchServices]);
+    const qParam = searchParams.get("q") || "";
+    const catParam = searchParams.get("category") || "all";
+    const stateParam = searchParams.get("state") || "all";
+
+    setQuery(qParam);
+    setActiveCategory(catParam);
+    setSelectedState(stateParam);
+    fetchServices(qParam, catParam, stateParam);
+  }, [searchParams, fetchServices]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

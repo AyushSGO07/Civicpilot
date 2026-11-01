@@ -33,9 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/auth-context";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface MilestoneEvent {
   id: string;
@@ -365,6 +363,36 @@ function WorkspaceInner() {
         }
       }
 
+      // If starting, also launch workflow state machine
+      if (action === "start") {
+        try {
+          fetch(`${API_BASE_URL}/api/agent/workflow/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: sessionId,
+              thread_id: sessionId,
+              service_id: serviceId,
+              custom_profile: profile,
+            }),
+          })
+            .then(async (res) => {
+              if (res.ok) {
+                const data = await res.json();
+                if (data.current_step) setCurrentStep(data.current_step);
+                if (data.screenshot_base64) setScreenshotBase64(data.screenshot_base64);
+                if (data.current_step === "waiting_approval") {
+                  setShowReviewModal(true);
+                  setExecutionStatus("paused");
+                }
+              }
+            })
+            .catch(() => {
+              // Handled by polling or simulation
+            });
+        } catch {}
+      }
+
       // Local State Transition Updates
       if (action === "pause") {
         setExecutionStatus("paused");
@@ -393,8 +421,61 @@ function WorkspaceInner() {
         addMilestone("discovery", "Workflow initialized. Launching Playwright runtime.", "info");
       }
     },
-    [sessionId, currentStep, addMilestone]
+    [sessionId, currentStep, serviceId, profile, addMilestone]
   );
+
+  // Robust Polling Fallback (for Vercel serverless / when WebSocket is disconnected)
+  useEffect(() => {
+    if (executionStatus !== "active" && executionStatus !== "paused") return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/agent/workflow/${sessionId}/state`);
+        if (res.ok) {
+          const state = await res.json();
+          if (state.current_step) {
+            setCurrentStep(state.current_step);
+            const idx = EXECUTION_STEPS.findIndex((s) => s.id === state.current_step);
+            if (idx !== -1) setStepIndex(idx);
+          }
+          if (state.screenshot_base64) {
+            setScreenshotBase64(state.screenshot_base64);
+          }
+          if (state.logs && Array.isArray(state.logs)) {
+            state.logs.forEach((logItem: { step?: string; message?: string; level?: string }) => {
+              if (logItem.message) {
+                addMilestone(
+                  logItem.step || "agent",
+                  logItem.message,
+                  (logItem.level as MilestoneEvent["level"]) || "info"
+                );
+              }
+            });
+          }
+          if (state.current_step === "waiting_approval") {
+            setShowReviewModal(true);
+            setExecutionStatus("paused");
+          } else if (state.current_step === "waiting_security_challenge") {
+            setSecurityChallenge({
+              detected: true,
+              type: state.security_challenge?.challenge_type || "captcha",
+              instructions:
+                state.security_challenge?.instructions ||
+                "Please complete the security challenge on the portal screen.",
+              promptMessage: state.security_challenge?.prompt_message,
+            });
+            setExecutionStatus("paused");
+          } else if (state.current_step === "completed") {
+            setExecutionStatus("completed");
+          }
+        }
+      } catch {
+        // Silently ignore polling errors
+      }
+    }, 2000);
+
+    return () => clearInterval(intervalId);
+  }, [executionStatus, sessionId, addMilestone]);
 
   // Direct Download of Official Receipt (PDF) from Workspace
   const handleDownloadWorkspaceReceipt = useCallback(async () => {

@@ -1,6 +1,8 @@
 """Router for managing Playwright browser automation sessions, DOM inspection, form filling, and LangGraph workflows."""
 
+import base64
 import uuid
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -299,8 +301,8 @@ async def close_session(session_id: str):
 )
 async def start_workflow(request: WorkflowStartRequest):
     """Launch end-to-end agent workflow (Discover -> Navigate -> Inspect -> Map -> Fill -> Validate)."""
-    thread_id = str(uuid.uuid4())
-    session_id = request.session_id or str(uuid.uuid4())
+    thread_id = request.thread_id or request.session_id or str(uuid.uuid4())
+    session_id = request.session_id or thread_id
 
     profile_dict = request.custom_profile or _get_active_profile().model_dump()
     vault_docs = request.custom_vault_documents or _get_active_vault_documents()
@@ -356,6 +358,29 @@ async def get_workflow_state(thread_id: str):
     snapshot = await agent_workflow_app.aget_state(config)
 
     if not snapshot or not snapshot.values:
+        # Graceful fallback: check if active browser session exists
+        page = await browser_manager.get_page(thread_id)
+        if page:
+            screenshot_b64 = None
+            try:
+                buf = await page.screenshot(type="jpeg", quality=60)
+                screenshot_b64 = base64.b64encode(buf).decode("utf-8")
+            except Exception:
+                pass
+            return WorkflowStateResponse(
+                thread_id=thread_id,
+                session_id=thread_id,
+                service_id="active",
+                portal_url=page.url if page else "",
+                current_step="navigation",
+                logs=[{
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "level": "info",
+                    "message": "Browser session active on portal",
+                    "step": "navigation",
+                }],
+                screenshot_base64=screenshot_b64,
+            )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Workflow thread '{thread_id}' not found in checkpointer",

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Search,
   GraduationCap,
-  Award,
   FileText,
   Car,
   Sprout,
@@ -19,14 +18,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const CATEGORIES = [
-  { id: "education", label: "Education", icon: GraduationCap },
-  { id: "scholarships", label: "Scholarships", icon: Award },
-  { id: "identity-docs", label: "Identity & Documents", icon: FileText },
-  { id: "transport", label: "Transport", icon: Car },
-  { id: "agriculture", label: "Agriculture", icon: Sprout },
+  { id: "all", label: "All Services", icon: Sparkles },
+  { id: "scholarships", label: "Scholarships & Education", icon: GraduationCap },
+  { id: "agriculture", label: "Agriculture & Farmers", icon: Sprout },
   { id: "healthcare", label: "Healthcare", icon: HeartPulse },
+  { id: "transport", label: "Transport & Licences", icon: Car },
   { id: "business-msme", label: "Business & MSME", icon: Building2 },
   { id: "financial-assistance", label: "Financial Assistance", icon: Banknote },
+  { id: "identity-docs", label: "Identity & Documents", icon: FileText },
 ];
 
 export const QUERY_CHIPS = [
@@ -39,20 +38,36 @@ export const QUERY_CHIPS = [
 export function HeroSearch() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
-  const [activeCategory, setActiveCategory] = React.useState<string>("education");
+  const [activeCategory, setActiveCategory] = React.useState<string>("all");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    router.push(`/services?q=${encodeURIComponent(query)}&category=${encodeURIComponent(activeCategory)}`);
+    const trimmed = query.trim();
+    const params = new URLSearchParams();
+    if (trimmed) params.set("q", trimmed);
+    if (activeCategory && activeCategory !== "all") params.set("category", activeCategory);
+
+    router.push(`/services${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const handleChipClick = (suggestion: string) => {
     setQuery(suggestion);
+    router.push(`/services?q=${encodeURIComponent(suggestion)}`);
   };
 
   const handleCategorySelect = (categoryId: string) => {
     setActiveCategory(categoryId);
+    const trimmed = query.trim();
+    if (categoryId !== "all") {
+      const params = new URLSearchParams();
+      if (trimmed) params.set("q", trimmed);
+      params.set("category", categoryId);
+      router.push(`/services?${params.toString()}`);
+    } else if (trimmed) {
+      router.push(`/services?q=${encodeURIComponent(trimmed)}`);
+    } else {
+      router.push(`/services`);
+    }
   };
 
   return (

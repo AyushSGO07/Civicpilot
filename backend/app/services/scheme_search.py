@@ -214,17 +214,33 @@ def search_services(
 
     # Category normalization mapping
     category_map = {
-        "education": "Education",
+        "all": None,
+        "all services": None,
+        "education": "Scholarships",
         "scholarships": "Scholarships",
+        "scholarship": "Scholarships",
         "identity-docs": "Identity & Documents",
         "identity & documents": "Identity & Documents",
+        "identity": "Identity & Documents",
         "transport": "Transport",
+        "driving": "Transport",
         "agriculture": "Agriculture",
+        "farming": "Agriculture",
+        "farmer": "Agriculture",
+        "farmers": "Agriculture",
         "healthcare": "Healthcare",
+        "health": "Healthcare",
+        "medical": "Healthcare",
         "business-msme": "Business & MSME",
         "business & msme": "Business & MSME",
+        "msme": "Business & MSME",
+        "business": "Business & MSME",
         "financial-assistance": "Financial Assistance",
         "financial assistance": "Financial Assistance",
+        "finance": "Financial Assistance",
+        "insurance": "Financial Assistance",
+        "housing": "Housing & Shelter",
+        "housing & shelter": "Housing & Shelter",
     }
 
     norm_category = None
@@ -236,9 +252,10 @@ def search_services(
         norm_state = state.strip().lower()
 
     query_tokens = []
+    clean_q = ""
     if query and query.strip():
         # Split into lowercase tokens excluding punctuation
-        clean_q = query.lower().replace(",", " ").replace(".", " ").replace("?", " ")
+        clean_q = query.lower().replace(",", " ").replace(".", " ").replace("?", " ").replace("!", " ")
         query_tokens = [t.strip() for t in clean_q.split() if len(t.strip()) > 1]
 
     for item in OFFICIAL_GOVERNMENT_SCHEMES:
@@ -248,7 +265,14 @@ def search_services(
         # 1. Filter Category
         if norm_category:
             item_cat = item["category"].lower()
-            if norm_category.lower() not in item_cat and item_cat not in norm_category.lower():
+            norm_lower = norm_category.lower()
+            match_cat = (
+                norm_lower in item_cat
+                or item_cat in norm_lower
+                or (norm_lower == "education" and "scholarship" in item_cat)
+                or (norm_lower == "scholarships" and "education" in item["service_name"].lower())
+            )
+            if not match_cat:
                 continue
 
         # 2. Filter State (Central schemes are applicable nationwide in all states)
@@ -265,21 +289,43 @@ def search_services(
             desc_lower = item["description"].lower()
             elig_lower = item["eligibility_summary"].lower()
             cat_lower = item["category"].lower()
+            docs_lower = " ".join(item.get("required_documents", [])).lower()
+            id_lower = item["id"].lower()
+
+            # Exact full phrase match bonus
+            clean_full = clean_q.strip()
+            if clean_full in title_lower:
+                score += 80
+            elif clean_full in desc_lower or clean_full in elig_lower:
+                score += 40
+
+            stop_words = {
+                "for", "in", "the", "and", "of", "to", "a", "an", "on", "with",
+                "at", "by", "is", "all", "find", "get", "need", "want", "apply",
+            }
 
             for token in query_tokens:
+                if token in stop_words:
+                    continue
+                if token in id_lower:
+                    score += 50
                 if token in title_lower:
                     score += 40
                 if token in cat_lower:
-                    score += 25
+                    score += 30
                 if token in dept_lower:
-                    score += 15
+                    score += 20
                 if token in elig_lower:
-                    score += 10
+                    score += 15
                 if token in desc_lower:
-                    score += 5
+                    score += 10
+                if token in docs_lower:
+                    score += 10
 
-            # If search query provided, only include matches with positive score
-            if score == 0:
+            # If all tokens were stop words (e.g. "for all"), award baseline score
+            if score == 0 and all(t in stop_words for t in query_tokens):
+                score = 10
+            elif score == 0:
                 continue
         else:
             score = 10  # default baseline score
