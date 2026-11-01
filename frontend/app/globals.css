@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@config "../tailwind.config.ts";
+
+:root {
+  --background: 220 27% 97%; /* #F5F7FB */
+  --foreground: 220 40% 15%; /* #1A2B4C */
+  --card: 0 0% 100%;         /* #FFFFFF */
+  --card-foreground: 220 40% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 40% 15%;
+  --primary: 215 100% 41%;   /* #0056D2 - Vibrant Blue */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 20% 90%;
+  --secondary-foreground: 220 40% 15%;
+  --muted: 220 20% 94%;
+  --muted-foreground: 220 15% 45%;
+  --accent: 191 100% 42%;    /* #00B4D8 - Cyan */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 220 20% 90%;     /* #E5E9F2 */
+  --input: 220 20% 90%;
+  --ring: 215 100% 41%;
+  --radius: 0.75rem;
+
+  /* Custom Theme Hex Variables */
+  --color-navy: #1A2B4C;
+  --color-navy-dark: #0F1A2E;
+  --color-navy-light: #243A66;
+  --color-civic-blue: #0056D2;
+  --color-civic-blue-hover: #0046AB;
+  --color-civic-blue-light: #E8F0FE;
+  --color-civic-cyan: #00B4D8;
+  --color-civic-cyan-dark: #0096B4;
+  --color-civic-cyan-light: #E0F7FA;
+  --color-canvas: #F5F7FB;
+  --color-canvas-muted: #EBF0F8;
+}
+
+@theme inline {
+  --color-navy: #1A2B4C;
+  --color-navy-dark: #0F1A2E;
+  --color-navy-light: #243A66;
+  --color-civic-blue: #0056D2;
+  --color-civic-blue-hover: #0046AB;
+  --color-civic-blue-light: #E8F0FE;
+  --color-civic-cyan: #00B4D8;
+  --color-civic-cyan-dark: #0096B4;
+  --color-civic-cyan-light: #E0F7FA;
+  --color-canvas: #F5F7FB;
+  --color-canvas-muted: #EBF0F8;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  min-height: 100vh;
+}
