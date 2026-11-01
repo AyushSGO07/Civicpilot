@@ -17,7 +17,7 @@ CivicPilot transforms public service bureaucracy into a guided, autonomous consu
 - [x] **Phase 4: Live Government Scheme Discovery & Search** - Ingesting verified official schemes with natural language search & filtering
 - [x] **Phase 5: AI Eligibility Assessment Engine** - Gemini-powered profile evaluation against official criteria with citations
 - [x] **Phase 6: Playwright Browser Automation Core & DOM Inspection** - Headless Chromium engine and accessible semantic DOM tree extraction
-- [ ] **Phase 7: Dynamic Field Mapping & Form Filling Engine** - Dynamic Gemini field mapping and automated multi-step form population
+- [x] **Phase 7: Dynamic Field Mapping & Form Filling Engine** - Dynamic Gemini field mapping and automated multi-step form population
 - [ ] **Phase 8: LangGraph Workflow Orchestration & Bounded Recovery** - Stateful workflow state machine with checkpointing and bounded retries
 - [ ] **Phase 9: Real-time Agent Execution Workspace & WebSockets** - 3-panel operations dashboard, live browser streaming, and controls
 - [ ] **Phase 10: Human-in-the-Loop Approval & Security Checkpoints** - Pre-submission summary, explicit approval gate, and CAPTCHA/OTP pause
@@ -168,8 +168,8 @@ Plans:
 
 Plans:
 
-- [ ] 07-01: Develop Gemini dynamic field mapping prompt generating structured action sequences from DOM trees and profile data
-- [ ] 07-02: Implement Playwright form action executor for text input, select dropdowns, radio/checkboxes, and file uploads
+- [x] 07-01: Develop Gemini dynamic field mapping prompt generating structured action sequences from DOM trees and profile data
+- [x] 07-02: Implement Playwright form action executor for text input, select dropdowns, radio/checkboxes, and file uploads
 
 ### Phase 8: LangGraph Workflow Orchestration & Bounded Recovery
 
@@ -284,7 +284,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Live Government Scheme Discovery & Search | 2/2 | Completed | 2026-11-01 |
 | 5. AI Eligibility Assessment Engine | 2/2 | Completed | 2026-11-01 |
 | 6. Playwright Browser Automation Core & DOM Inspection | 2/2 | Completed | 2026-11-01 |
-| 7. Dynamic Field Mapping & Form Filling Engine | 0/2 | Not started | - |
+| 7. Dynamic Field Mapping & Form Filling Engine | 2/2 | Completed | 2026-11-01 |
 | 8. LangGraph Workflow Orchestration & Bounded Recovery | 0/2 | Not started | - |
 | 9. Real-time Agent Execution Workspace & WebSockets | 0/3 | Not started | - |
 | 10. Human-in-the-Loop Approval & Security Checkpoints | 0/2 | Not started | - |
