@@ -19,7 +19,7 @@ CivicPilot transforms public service bureaucracy into a guided, autonomous consu
 - [x] **Phase 6: Playwright Browser Automation Core & DOM Inspection** - Headless Chromium engine and accessible semantic DOM tree extraction
 - [x] **Phase 7: Dynamic Field Mapping & Form Filling Engine** - Dynamic Gemini field mapping and automated multi-step form population
 - [x] **Phase 8: LangGraph Workflow Orchestration & Bounded Recovery** - Stateful workflow state machine with checkpointing and bounded retries
-- [ ] **Phase 9: Real-time Agent Execution Workspace & WebSockets** - 3-panel operations dashboard, live browser streaming, and controls
+- [x] **Phase 9: Real-time Agent Execution Workspace & WebSockets** - 3-panel operations dashboard, live browser streaming, and controls
 - [ ] **Phase 10: Human-in-the-Loop Approval & Security Checkpoints** - Pre-submission summary, explicit approval gate, and CAPTCHA/OTP pause
 - [ ] **Phase 11: Submission Verification, Receipt Retrieval & Application Tracking** - Authentic reference capture, PDF receipt storage, and My Applications dashboard
 - [ ] **Phase 12: End-to-End Integration, Demonstration Polish & Production Hardening** - Complete live flow verification on target portals and documentation
@@ -207,9 +207,9 @@ Plans:
 
 Plans:
 
-- [ ] 09-01: Build FastAPI WebSocket manager streaming JSON event frames and Base64 screenshot buffers for active sessions
-- [ ] 09-02: Create frontend Agent Execution Workspace layout with canvas renderer, reasoning log, and profile summary panel
-- [ ] 09-03: Implement execution controls (Start, Pause, Resume, Stop) communicating with backend agent controller
+- [x] 09-01: Build FastAPI WebSocket manager streaming JSON event frames and Base64 screenshot buffers for active sessions
+- [x] 09-02: Create frontend Agent Execution Workspace layout with canvas renderer, reasoning log, and profile summary panel
+- [x] 09-03: Implement execution controls (Start, Pause, Resume, Stop) communicating with backend agent controller
 
 ### Phase 10: Human-in-the-Loop Approval & Security Checkpoints
 

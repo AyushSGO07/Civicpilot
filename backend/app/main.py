@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import health, profile, documents, services, agent
+from app.routers import health, profile, documents, services, agent, websocket
 from app.services.browser_manager import browser_manager
 
 
@@ -42,6 +42,8 @@ app.include_router(profile.router, prefix=settings.API_PREFIX)
 app.include_router(documents.router, prefix=settings.API_PREFIX)
 app.include_router(services.router, prefix=settings.API_PREFIX)
 app.include_router(agent.router, prefix=settings.API_PREFIX)
+app.include_router(websocket.router)
+app.include_router(websocket.router, prefix=settings.API_PREFIX)
 
 
 @app.get("/", tags=["Root"])
