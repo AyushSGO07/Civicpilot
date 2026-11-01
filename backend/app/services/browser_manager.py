@@ -81,15 +81,34 @@ class BrowserSessionManager:
 
             headless = os.getenv("BROWSER_HEADLESS", "true").lower() != "false"
             self._playwright = await async_playwright().start()
-            self._browser = await self._playwright.chromium.launch(
-                headless=headless,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-blink-features=AutomationControlled",
-                ],
-            )
+
+            # Check for remote cloud browser (Browserless / Browserbase / CDP endpoint)
+            cdp_url = os.getenv("PLAYWRIGHT_CDP_URL") or os.getenv("BROWSERLESS_URL")
+            if not cdp_url and os.getenv("BROWSERLESS_API_KEY"):
+                cdp_url = f"wss://chrome.browserless.io?token={os.getenv('BROWSERLESS_API_KEY')}"
+
+            if cdp_url:
+                self._browser = await self._playwright.chromium.connect_over_cdp(cdp_url)
+            else:
+                try:
+                    self._browser = await self._playwright.chromium.launch(
+                        headless=headless,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-setuid-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-blink-features=AutomationControlled",
+                        ],
+                    )
+                except Exception as exc:
+                    exc_str = str(exc).lower()
+                    if "executable doesn't exist" in exc_str or "missing dependencies" in exc_str:
+                        raise RuntimeError(
+                            "Local Chromium is not installed in this serverless environment. "
+                            "Please configure PLAYWRIGHT_CDP_URL or BROWSERLESS_API_KEY in your environment variables "
+                            "to connect to a remote cloud browser (e.g. Browserless.io or Browserbase)."
+                        ) from exc
+                    raise
             self._initialized = True
             self._loop = current_loop
 
