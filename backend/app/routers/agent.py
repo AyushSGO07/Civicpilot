@@ -1,5 +1,6 @@
-"""Router for managing Playwright browser automation sessions, DOM inspection, and form filling."""
+"""Router for managing Playwright browser automation sessions, DOM inspection, form filling, and LangGraph workflows."""
 
+import uuid
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -15,14 +16,20 @@ from app.models.form_filling import (
     FormFillPlan,
     FormExecutionResult,
 )
+from app.models.workflow import (
+    WorkflowStartRequest,
+    WorkflowStateResponse,
+    AgentWorkflowState,
+)
 from app.services.browser_manager import browser_manager
 from app.services.dom_inspector import DOMInspector
 from app.services.field_mapper import DynamicFieldMapper
 from app.services.form_executor import FormActionExecutor
+from app.services.workflow_engine import agent_workflow_app
 from app.routers.profile import _PROFILES_STORE, DEFAULT_USER_ID
 from app.routers.documents import _DOCUMENTS_STORE
 
-router = APIRouter(prefix="/agent/browser", tags=["Agent & Browser Automation"])
+router = APIRouter(prefix="/agent", tags=["Agent & Browser Automation"])
 
 
 class SessionStartResponse(BaseModel):
@@ -78,12 +85,15 @@ def _get_active_vault_documents(override: Optional[List[Dict[str, Any]]] = None)
     """Retrieve list of documents available in the citizen's vault."""
     if override is not None:
         return override
-    # Convert _DOCUMENTS_STORE values to list
     return list(_DOCUMENTS_STORE.values())
 
 
+# -------------------------------------------------------------------------
+# Browser Automation & Session Endpoints
+# -------------------------------------------------------------------------
+
 @router.post(
-    "/session/start",
+    "/browser/session/start",
     response_model=SessionStartResponse,
     summary="Start an isolated Playwright browser session (AGENT-01)",
 )
@@ -94,7 +104,7 @@ async def start_session(session_id: Optional[str] = None):
 
 
 @router.get(
-    "/session/{session_id}",
+    "/browser/session/{session_id}",
     response_model=BrowserSessionInfo,
     summary="Get status of an active browser session",
 )
@@ -110,7 +120,7 @@ async def get_session(session_id: str):
 
 
 @router.post(
-    "/session/{session_id}/navigate",
+    "/browser/session/{session_id}/navigate",
     response_model=BrowserNavigateResponse,
     summary="Navigate browser session to target URL (AGENT-01)",
 )
@@ -138,7 +148,7 @@ async def navigate_page(session_id: str, request: BrowserNavigateRequest):
 
 
 @router.get(
-    "/session/{session_id}/inspect",
+    "/browser/session/{session_id}/inspect",
     response_model=SanitizedDOMTree,
     summary="Extract sanitized semantic DOM element tree (AGENT-02)",
 )
@@ -161,7 +171,7 @@ async def inspect_dom(session_id: str):
 
 
 @router.post(
-    "/session/{session_id}/form/plan",
+    "/browser/session/{session_id}/form/plan",
     response_model=FormFillPlan,
     summary="Generate dynamic form filling plan from DOM and profile (AGENT-03, AGENT-05)",
 )
@@ -185,7 +195,7 @@ async def plan_form_filling(
 
 
 @router.post(
-    "/session/{session_id}/form/execute",
+    "/browser/session/{session_id}/form/execute",
     response_model=FormExecutionResult,
     summary="Autonomously execute form actions on the browser page (AGENT-04, AGENT-05)",
 )
@@ -205,7 +215,7 @@ async def execute_form_filling(
 
 
 @router.post(
-    "/session/{session_id}/form/fill",
+    "/browser/session/{session_id}/form/fill",
     response_model=FormExecutionResult,
     summary="Inspect, plan, and populate form in one autonomous operation (AGENT-03, AGENT-04, AGENT-05)",
 )
@@ -230,7 +240,7 @@ async def fill_form_composite(
 
 
 @router.get(
-    "/session/{session_id}/screenshot",
+    "/browser/session/{session_id}/screenshot",
     response_model=ScreenshotResponse,
     summary="Capture Base64 screenshot of current browser page",
 )
@@ -254,7 +264,7 @@ async def get_screenshot(session_id: str):
 
 
 @router.post(
-    "/session/{session_id}/close",
+    "/browser/session/{session_id}/close",
     response_model=SessionCloseResponse,
     summary="Cleanly terminate browser session and context (AGENT-07)",
 )
@@ -267,3 +277,129 @@ async def close_session(session_id: str):
             detail=f"Browser session '{session_id}' not found or already closed",
         )
     return SessionCloseResponse(session_id=session_id, status="closed")
+
+
+# -------------------------------------------------------------------------
+# LangGraph Workflow Controller Endpoints (AGENT-06)
+# -------------------------------------------------------------------------
+
+@router.post(
+    "/workflow/start",
+    response_model=WorkflowStateResponse,
+    summary="Start a stateful LangGraph agent workflow with bounded recovery (AGENT-06)",
+)
+async def start_workflow(request: WorkflowStartRequest):
+    """Launch end-to-end agent workflow (Discover -> Navigate -> Inspect -> Map -> Fill -> Validate)."""
+    thread_id = str(uuid.uuid4())
+    session_id = request.session_id or str(uuid.uuid4())
+
+    profile_dict = request.custom_profile or _get_active_profile().model_dump()
+    vault_docs = request.custom_vault_documents or _get_active_vault_documents()
+
+    initial_state: AgentWorkflowState = {
+        "session_id": session_id,
+        "thread_id": thread_id,
+        "service_id": request.service_id,
+        "portal_url": request.portal_url_override or "",
+        "citizen_profile": profile_dict,
+        "vault_documents": vault_docs,
+        "current_step": "discovery",
+        "error_count": 0,
+        "max_retries": 3,
+        "logs": [],
+        "dialog_messages": [],
+    }
+
+    config = {"configurable": {"thread_id": thread_id}}
+
+    try:
+        final_state = await agent_workflow_app.ainvoke(initial_state, config=config)
+        return WorkflowStateResponse(
+            thread_id=thread_id,
+            session_id=final_state.get("session_id", session_id),
+            service_id=final_state.get("service_id", request.service_id),
+            portal_url=final_state.get("portal_url", ""),
+            current_step=final_state.get("current_step", "completed"),
+            error_count=final_state.get("error_count", 0),
+            max_retries=final_state.get("max_retries", 3),
+            error_message=final_state.get("error_message"),
+            dialog_messages=final_state.get("dialog_messages", []),
+            logs=final_state.get("logs", []),
+            screenshot_base64=final_state.get("screenshot_base64"),
+            execution_result=final_state.get("execution_result"),
+            fill_plan=final_state.get("fill_plan"),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Workflow execution failed: {str(e)}",
+        )
+
+
+@router.get(
+    "/workflow/{thread_id}/state",
+    response_model=WorkflowStateResponse,
+    summary="Retrieve state snapshot of a workflow thread from checkpointer",
+)
+async def get_workflow_state(thread_id: str):
+    """Query persisted LangGraph state snapshot by thread ID."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await agent_workflow_app.aget_state(config)
+
+    if not snapshot or not snapshot.values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workflow thread '{thread_id}' not found in checkpointer",
+        )
+
+    values = snapshot.values
+    return WorkflowStateResponse(
+        thread_id=thread_id,
+        session_id=values.get("session_id", ""),
+        service_id=values.get("service_id", ""),
+        portal_url=values.get("portal_url", ""),
+        current_step=values.get("current_step", "unknown"),
+        error_count=values.get("error_count", 0),
+        max_retries=values.get("max_retries", 3),
+        error_message=values.get("error_message"),
+        dialog_messages=values.get("dialog_messages", []),
+        logs=values.get("logs", []),
+        screenshot_base64=values.get("screenshot_base64"),
+        execution_result=values.get("execution_result"),
+        fill_plan=values.get("fill_plan"),
+    )
+
+
+@router.post(
+    "/workflow/{thread_id}/resume",
+    response_model=WorkflowStateResponse,
+    summary="Resume execution on a paused workflow thread",
+)
+async def resume_workflow(thread_id: str):
+    """Resume execution on an interrupted or paused workflow thread."""
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await agent_workflow_app.aget_state(config)
+
+    if not snapshot or not snapshot.values:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workflow thread '{thread_id}' not found in checkpointer",
+        )
+
+    # Continue execution from current checkpoint
+    final_state = await agent_workflow_app.ainvoke(None, config=config)
+    return WorkflowStateResponse(
+        thread_id=thread_id,
+        session_id=final_state.get("session_id", ""),
+        service_id=final_state.get("service_id", ""),
+        portal_url=final_state.get("portal_url", ""),
+        current_step=final_state.get("current_step", "completed"),
+        error_count=final_state.get("error_count", 0),
+        max_retries=final_state.get("max_retries", 3),
+        error_message=final_state.get("error_message"),
+        dialog_messages=final_state.get("dialog_messages", []),
+        logs=final_state.get("logs", []),
+        screenshot_base64=final_state.get("screenshot_base64"),
+        execution_result=final_state.get("execution_result"),
+        fill_plan=final_state.get("fill_plan"),
+    )

@@ -18,7 +18,7 @@ CivicPilot transforms public service bureaucracy into a guided, autonomous consu
 - [x] **Phase 5: AI Eligibility Assessment Engine** - Gemini-powered profile evaluation against official criteria with citations
 - [x] **Phase 6: Playwright Browser Automation Core & DOM Inspection** - Headless Chromium engine and accessible semantic DOM tree extraction
 - [x] **Phase 7: Dynamic Field Mapping & Form Filling Engine** - Dynamic Gemini field mapping and automated multi-step form population
-- [ ] **Phase 8: LangGraph Workflow Orchestration & Bounded Recovery** - Stateful workflow state machine with checkpointing and bounded retries
+- [x] **Phase 8: LangGraph Workflow Orchestration & Bounded Recovery** - Stateful workflow state machine with checkpointing and bounded retries
 - [ ] **Phase 9: Real-time Agent Execution Workspace & WebSockets** - 3-panel operations dashboard, live browser streaming, and controls
 - [ ] **Phase 10: Human-in-the-Loop Approval & Security Checkpoints** - Pre-submission summary, explicit approval gate, and CAPTCHA/OTP pause
 - [ ] **Phase 11: Submission Verification, Receipt Retrieval & Application Tracking** - Authentic reference capture, PDF receipt storage, and My Applications dashboard
@@ -187,8 +187,8 @@ Plans:
 
 Plans:
 
-- [ ] 08-01: Construct LangGraph state graph with nodes for Discovery, Inspection, Mapping, Filling, and Validation
-- [ ] 08-02: Implement bounded error recovery logic with state mutation checks and unexpected modal/popup handlers
+- [x] 08-01: Construct LangGraph state graph with nodes for Discovery, Inspection, Mapping, Filling, and Validation
+- [x] 08-02: Implement bounded error recovery logic with state mutation checks and unexpected modal/popup handlers
 
 ### Phase 9: Real-time Agent Execution Workspace & WebSockets
 
@@ -285,7 +285,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. AI Eligibility Assessment Engine | 2/2 | Completed | 2026-11-01 |
 | 6. Playwright Browser Automation Core & DOM Inspection | 2/2 | Completed | 2026-11-01 |
 | 7. Dynamic Field Mapping & Form Filling Engine | 2/2 | Completed | 2026-11-01 |
-| 8. LangGraph Workflow Orchestration & Bounded Recovery | 0/2 | Not started | - |
+| 8. LangGraph Workflow Orchestration & Bounded Recovery | 2/2 | Completed | 2026-11-01 |
 | 9. Real-time Agent Execution Workspace & WebSockets | 0/3 | Not started | - |
 | 10. Human-in-the-Loop Approval & Security Checkpoints | 0/2 | Not started | - |
 | 11. Submission Verification, Receipt Retrieval & Application Tracking | 0/2 | Not started | - |
